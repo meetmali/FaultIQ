@@ -9,6 +9,7 @@ import type { Page, Route } from "@playwright/test";
 const root = (p: string) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
 const result = JSON.parse(readFileSync(root("docs/explanations/examples/simulated-condenser-fouling.json"), "utf8"));
 const library = JSON.parse(readFileSync(root("api/src/FaultIQ.Api/FaultLibrary/fault-library.json"), "utf8"));
+const registry = JSON.parse(readFileSync(root("api/src/FaultIQ.Api/Models/model-registry.json"), "utf8"));
 
 export const EQUIPMENT_ID = "0190a1f3-0000-7000-8000-000000000001";
 export const ANALYSIS_ID = "0190a1f3-0000-7000-8000-000000000002";
@@ -85,6 +86,32 @@ const eventRows = result.events.map((ev: { id: string; kind: string; fault: stri
 
 const page = <T>(items: T[]) => ({ items, page: 1, page_size: 20, total: items.length });
 
+// Data-quality report (ADR 0027): synthetic counts, shaped like docs/contracts/data-quality-report.schema.json.
+const report = {
+  version: 1, status: "accepted_with_warnings", file: "rtu-1 export.csv", sha256: "0".repeat(64), mapping: "lbnl_simulated",
+  pipeline_version: result.pipeline_version,
+  issues: [{ severity: "warning", code: "gaps", message: "2 gaps longer than one minute. Missing minutes are flagged, not filled." }],
+  load: {
+    rows: result.hours_total * 60, unreadable_timestamps: 0, duplicate_timestamps: 0, gaps_over_1min: 2, dropout_rows: 0,
+    unmapped_columns: [], excluded_columns: {},
+  },
+  missing_share: { sat: 0.002 },
+  grid: { step_seconds: 60, segments: 1, inserted_missing_rows: 3, output_rows: result.hours_total * 60 + 3 },
+  operating: { steady_share: 0.71, mode_share: { cooling: 0.8, fan_only: 0.05, off: 0.15 } },
+};
+
+// GET /models: the committed registry, with the fixture analysis's version recorded on its entry.
+const models = {
+  diagnosis_version: registry.diagnosis_version, evaluated_with_pipeline_version: registry.pipeline_version,
+  evaluated_on: registry.evaluated_on, target_named_fault_precision: registry.target_named_fault_precision,
+  items: registry.models.map((m: { format: string; point_set: string }) => ({
+    ...m,
+    versions: m.format === "lbnl_simulated" && m.point_set === "all"
+      ? [{ model_version: analysis.model_version, pipeline_versions: [analysis.pipeline_version], analyses: 1, first_used_at: analysis.finished_at, last_used_at: analysis.finished_at }]
+      : [],
+  })),
+};
+
 /** Answers every /api/v1 call the journey makes. `demo` turns on demo mode. */
 export async function mockApi(p: Page, { demo = false, failOverview = false } = {}) {
   const json = (route: Route, body: unknown, status = 200) =>
@@ -118,6 +145,8 @@ export async function mockApi(p: Page, { demo = false, failOverview = false } = 
     if (path === `/analyses/${ANALYSIS_ID}`) return json(route, analysis);
     if (path === `/analyses/${ANALYSIS_ID}/result`) return json(route, result);
     if (path === `/analyses/${ANALYSIS_ID}/series`) return json(route, series());
+    if (path === `/analyses/${ANALYSIS_ID}/report`) return json(route, report);
+    if (path === "/models") return json(route, models);
     if (path === "/fault-events/summary") return json(route, { items: [{ kind: event.kind, fault: event.fault, events: 1, hours: event.hours }], events: 1, hours: event.hours });
     if (path === "/fault-events") return json(route, page(eventRows));
     if (path === "/fault-library") return json(route, { review_status: library.review_status, sources: library.sources, items: library.faults });

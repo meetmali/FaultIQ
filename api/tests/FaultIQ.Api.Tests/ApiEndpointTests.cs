@@ -89,6 +89,17 @@ public sealed class UploadValidationTests(ApiFactory factory) : IClassFixture<Ap
     }
 
     [Fact]
+    public void ModelRegistry_IsEmbedded_WithOneEntryPerFormatAndPointSet()
+    {
+        var doc = factory.Services.GetRequiredService<FaultIQ.Api.Features.ModelRegistryStore>().Document;
+        Assert.Equal(
+            ["lbnl_experimental/all", "lbnl_experimental/basic", "lbnl_simulated/all", "lbnl_simulated/basic"],
+            doc.Models.Select(m => $"{m.Format}/{m.PointSet}").Order(StringComparer.Ordinal));
+        Assert.All(doc.Models, m => Assert.Contains(m.AdoptedModel, new[] { "logistic", "lightgbm" }));
+        Assert.All(doc.Models, m => Assert.DoesNotContain("fault_free", m.Faults));
+    }
+
+    [Fact]
     public void Model_HasNoChangesMissingFromMigrations()
     {
         using var scope = factory.Services.CreateScope();
@@ -289,6 +300,92 @@ public sealed class DatabaseEndpointTests(DatabaseFactory factory) : IClassFixtu
 
         var sites = await client.GetFromJsonAsync<JsonElement>(Url("/api/v1/equipment/sites"));
         Assert.Contains(sites.EnumerateArray(), x => x.GetProperty("site").GetString() == "Test site");
+    }
+
+    private async Task<Guid> QueueAnalysisAsync(HttpClient client, string name)
+    {
+        var equipmentId = await CreateEquipmentAsync(client, name);
+        var upload = await UploadAsync(client, equipmentId, "a\n1\n"u8.ToArray());
+        var created = await client.PostAsJsonAsync(Url("/api/v1/analyses"),
+            new { upload_id = upload.GetProperty("id").GetGuid() }, Snake);
+        return (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+    }
+
+    private async Task UpdateAnalysisAsync(Guid id, Action<Analysis> change)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<FaultIqDbContext>();
+        change(await db.Analyses.SingleAsync(a => a.Id == id));
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<string?> Code(HttpResponseMessage resp) =>
+        JsonDocument.Parse(await resp.Content.ReadAsStringAsync()).RootElement.GetProperty("code").GetString();
+
+    [DatabaseFact]
+    public async Task Report_IsServedForQuarantinedFiles_AndExplainsWhenThereIsNone()
+    {
+        var client = factory.CreateClient();
+        var id = await QueueAnalysisAsync(client, "RTU-report");
+
+        var early = await client.GetAsync(Url($"/api/v1/analyses/{id}/report"));
+        Assert.Equal(HttpStatusCode.Conflict, early.StatusCode);
+        Assert.Equal("result_not_ready", await Code(early));
+
+        // A job that failed before validation (for example upload_missing) has no report.
+        await UpdateAnalysisAsync(id, a => { a.Status = AnalysisStatus.Failed; a.ErrorCode = "upload_missing"; });
+        var none = await client.GetAsync(Url($"/api/v1/analyses/{id}/report"));
+        Assert.Equal(HttpStatusCode.NotFound, none.StatusCode);
+        Assert.Equal("report_not_available", await Code(none));
+
+        // Play the worker's part for a quarantined file: the report is kept with the failure.
+        const string report = """{"version": 1, "status": "quarantined", "file": "my export.csv", "issues": [{"severity": "error", "code": "timestamps_out_of_order", "message": "Timestamps go backwards 1 times. Sort the export by time and upload it again."}]}""";
+        await UpdateAnalysisAsync(id, a => { a.ErrorCode = "validation_failed"; a.ProcessingReport = report; });
+        var served = await client.GetFromJsonAsync<JsonElement>(Url($"/api/v1/analyses/{id}/report"));
+        Assert.Equal("quarantined", served.GetProperty("status").GetString());
+        Assert.Equal("timestamps_out_of_order", served.GetProperty("issues")[0].GetProperty("code").GetString());
+
+        var unknown = await client.GetAsync(Url($"/api/v1/analyses/{Guid.NewGuid()}/report"));
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        Assert.Equal("not_found", await Code(unknown));
+    }
+
+    [DatabaseFact]
+    public async Task Models_JoinTheRegistryWithVersionsRecordedOnAnalyses()
+    {
+        var client = factory.CreateClient();
+        var finished = new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
+        const string version = "lbnl_simulated-all@diagnosis-0.1.0+abc123def456";
+        foreach (var (name, hours) in new[] { ("RTU-m1", 0), ("RTU-m2", 5) })
+        {
+            var id = await QueueAnalysisAsync(client, name);
+            await UpdateAnalysisAsync(id, a =>
+            {
+                a.Status = AnalysisStatus.Succeeded;
+                a.ModelVersion = version;
+                a.PipelineVersion = "0.2.0";
+                a.FinishedAt = finished.AddHours(hours);
+            });
+        }
+
+        var models = await client.GetFromJsonAsync<JsonElement>(Url("/api/v1/models"));
+        Assert.Equal("0.1.0", models.GetProperty("diagnosis_version").GetString());
+        var items = models.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(4, items.Count);
+        var simAll = items.Single(m => m.GetProperty("format").GetString() == "lbnl_simulated"
+                                       && m.GetProperty("point_set").GetString() == "all");
+        Assert.Equal("lightgbm", simAll.GetProperty("adopted_model").GetString());
+        Assert.InRange(simAll.GetProperty("held_out").GetProperty("test_macro_f1").GetDouble(), 0, 1);
+        var used = simAll.GetProperty("versions").EnumerateArray().Single(v => v.GetProperty("model_version").GetString() == version);
+        Assert.True(used.GetProperty("analyses").GetInt32() >= 2);
+        Assert.Equal(["0.2.0"], used.GetProperty("pipeline_versions").EnumerateArray().Select(p => p.GetString()));
+        Assert.Equal(finished.AddHours(5), used.GetProperty("last_used_at").GetDateTimeOffset());
+
+        // Versions are matched by the upload's format and point set, never by parsing the string.
+        var simBasic = items.Single(m => m.GetProperty("format").GetString() == "lbnl_simulated"
+                                         && m.GetProperty("point_set").GetString() == "basic");
+        Assert.DoesNotContain(simBasic.GetProperty("versions").EnumerateArray(),
+            v => v.GetProperty("model_version").GetString() == version);
     }
 
     [DatabaseFact]

@@ -20,6 +20,8 @@ export const keys = {
   libraryEntry: (id: string) => ["fault-library", "entry", id] as const,
   types: ["equipment-types"] as const,
   daily: (filters: object) => ["fault-events", "daily", filters] as const,
+  report: (id: string) => ["analysis", id, "report"] as const,
+  models: ["models"] as const,
 };
 
 const TERMINAL = new Set(["succeeded", "failed"]);
@@ -72,6 +74,17 @@ export const useSeries = (id: string | undefined, ready: boolean) =>
     enabled: Boolean(id) && ready,
     staleTime: Infinity,
   });
+
+/** The data-quality report, once the analysis has finished or failed (ADR 0027). */
+export const useReport = (id: string | undefined, finished: boolean) =>
+  useQuery({
+    queryKey: keys.report(id ?? ""),
+    queryFn: ({ signal }) => api.getAnalysisReport(id!, signal),
+    enabled: Boolean(id) && finished,
+    staleTime: Infinity, // written once by the worker
+  });
+
+export const useModels = () => useQuery({ queryKey: keys.models, queryFn: api.listModels });
 
 export const useFaultEvents = (filters: Parameters<typeof api.listFaultEvents>[0]) =>
   useQuery({

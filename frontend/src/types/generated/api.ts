@@ -212,6 +212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analyses/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAnalysisReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fault-events": {
         parameters: {
             query?: never;
@@ -316,6 +332,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetFaultLibraryEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListModels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -491,6 +523,22 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        HeldOutResults: {
+            /** Format: int32 */
+            test_hours: number;
+            /** Format: double */
+            test_macro_f1: number;
+            /** Format: double */
+            validation_macro_f1: number;
+            /** Format: double */
+            answered_share: number;
+            /** Format: double */
+            named_fault_precision: number;
+            /** Format: double */
+            right_fault_on_faulty_hours: number;
+            /** Format: double */
+            calibration_error: number;
+        };
         /** Format: binary */
         IFormFile: string;
         LibraryFault: {
@@ -519,6 +567,36 @@ export interface components {
             id: string;
             citation: string;
             url: null | string;
+        };
+        ModelResponse: {
+            format: string;
+            point_set: string;
+            dataset: string;
+            dataset_label: string;
+            adopted_model: string;
+            trained_on: components["schemas"]["TrainingSplit"];
+            evaluation: string;
+            faults: string[];
+            held_out: components["schemas"]["HeldOutResults"];
+            versions: components["schemas"]["ModelVersionUse"][];
+        };
+        ModelVersionUse: {
+            model_version: string;
+            pipeline_versions: string[];
+            /** Format: int32 */
+            analyses: number;
+            /** Format: date-time */
+            first_used_at: null | string;
+            /** Format: date-time */
+            last_used_at: null | string;
+        };
+        ModelsResponse: {
+            diagnosis_version: string;
+            evaluated_with_pipeline_version: string;
+            evaluated_on: string;
+            /** Format: double */
+            target_named_fault_precision: number;
+            items: components["schemas"]["ModelResponse"][];
         };
         PagedResultOfAnalysisResponse: {
             items: components["schemas"]["AnalysisResponse"][];
@@ -600,6 +678,10 @@ export interface components {
             kind: string;
             /** Format: int32 */
             deciding_hours: number;
+        };
+        TrainingSplit: {
+            train: string;
+            validation: string;
         };
         UploadResponse: {
             /** Format: uuid */
@@ -1006,6 +1088,44 @@ export interface operations {
             };
         };
     };
+    GetAnalysisReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     ListFaultEvents: {
         parameters: {
             query?: {
@@ -1177,6 +1297,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LibraryFaultResponse"];
+                };
+            };
+        };
+    };
+    ListModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelsResponse"];
                 };
             };
         };

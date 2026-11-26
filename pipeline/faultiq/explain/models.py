@@ -49,17 +49,26 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _fit(processed: Path, dataset: str, point_set: str) -> tuple[Diagnoser, dict[str, Any]]:
+def _production_roles() -> dict[str, str]:
+    return {s: ("val" if s == PRODUCTION_VAL_SEASON else "train") for s in SEASONS}
+
+
+def training_split(dataset: str) -> dict[str, Any]:
+    """What the installed model for a dataset is trained and validated on (shown on /models)."""
     if dataset == "simulated":
-        return fit_simulated(processed, point_set), {
-            "train": "days 0-59",
-            "validation": "days 61-80",
-        }
-    roles = {s: ("val" if s == PRODUCTION_VAL_SEASON else "train") for s in SEASONS}
-    return fit_experimental_roles(processed, roles, point_set), {
+        return {"train": "days 0-59", "validation": "days 61-80"}
+    roles = _production_roles()
+    return {
         "train": [s for s, r in roles.items() if r == "train"],
         "validation": PRODUCTION_VAL_SEASON,
     }
+
+
+def _fit(processed: Path, dataset: str, point_set: str) -> tuple[Diagnoser, dict[str, Any]]:
+    if dataset == "simulated":
+        return fit_simulated(processed, point_set), training_split(dataset)
+    model = fit_experimental_roles(processed, _production_roles(), point_set)
+    return model, training_split(dataset)
 
 
 def train_models(processed: Path, out: Path) -> Path:

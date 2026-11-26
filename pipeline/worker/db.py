@@ -87,6 +87,7 @@ analyses = Table(
     Column("event_count", Integer),
     Column("result", JSONB),
     Column("chart_series", JSONB),
+    Column("processing_report", JSONB),
 )
 
 fault_events = Table(
@@ -199,6 +200,7 @@ def complete(
     series: dict[str, Any],
     model_version: str,
     pipeline_version: str,
+    report: dict[str, Any] | None = None,
     now: datetime | None = None,
 ) -> None:
     """Store the result, its event summaries and the series, and mark the job succeeded, in one
@@ -235,6 +237,7 @@ def complete(
                 finished_at=now,
                 result=result,
                 chart_series=series,
+                processing_report=report,
                 model_version=model_version,
                 pipeline_version=pipeline_version,
                 hours_total=result["hours_total"],
@@ -247,8 +250,16 @@ def complete(
             raise RuntimeError(f"job {job.id} is no longer running; result discarded")
 
 
-def fail(engine: Engine, job: Job, code: str, message: str, now: datetime | None = None) -> None:
-    """Mark the job failed with a safe, user-facing message (never a stack trace)."""
+def fail(
+    engine: Engine,
+    job: Job,
+    code: str,
+    message: str,
+    now: datetime | None = None,
+    report: dict[str, Any] | None = None,
+) -> None:
+    """Mark the job failed with a safe, user-facing message (never a stack trace), keeping the
+    data-quality report when validation ran (ADR 0027)."""
     with engine.begin() as conn:
         conn.execute(
             update(analyses)
@@ -258,6 +269,7 @@ def fail(engine: Engine, job: Job, code: str, message: str, now: datetime | None
                 finished_at=now or datetime.now(UTC),
                 error_code=code[:100],
                 error_message=message[:1000],
+                processing_report=report,
             )
         )
 

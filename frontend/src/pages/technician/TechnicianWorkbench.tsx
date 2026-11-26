@@ -3,6 +3,7 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
 import { KindBadge, ReviewBadge } from "../../components/Badges";
+import { DataQualityCard } from "../../components/DataQuality";
 import { ChartFigure, type ChartOption } from "../../components/charts";
 import { axisName, KIND_SHADE, LINE_COLORS } from "../../components/charts/theme";
 import { Empty, ErrorState, Freshness, Loading, QueryView } from "../../components/QueryState";
@@ -117,11 +118,14 @@ export default function TechnicianWorkbench() {
 function AnalysisStatus({ analysis }: { analysis: AnalysisResponse }) {
   if (analysis.status === "failed") {
     return (
-      <Card>
-        <CardTitle>Analysis failed</CardTitle>
-        <p role="alert" className="text-sm text-fault">{analysis.error_message ?? "The analysis failed."}</p>
-        <p className="mt-1 text-xs text-muted">Error code: {analysis.error_code}</p>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardTitle>Analysis failed</CardTitle>
+          <p role="alert" className="text-sm text-fault">{analysis.error_message ?? "The analysis failed."}</p>
+          <p className="mt-1 text-xs text-muted">Error code: {analysis.error_code}</p>
+        </Card>
+        <DataQualityCard analysis={analysis} detailed />
+      </div>
     );
   }
   return (
@@ -168,7 +172,9 @@ function Results({
         <Stat label="Points used" value={result.point_set === "basic" ? "Basic" : "All"} />
       </dl>
       <p className="text-xs text-muted">
-        Event times are shown as recorded in the uploaded data. Model {analysis.model_version} · pipeline {analysis.pipeline_version} · result schema {result.schema_version}
+        Event times are shown as recorded in the uploaded data. Model{" "}
+        <Link to="/models" className="text-accent underline underline-offset-2">{analysis.model_version}</Link> · pipeline{" "}
+        {analysis.pipeline_version} · result schema {result.schema_version}
       </p>
 
       {series?.hourly ? (
@@ -253,6 +259,7 @@ function Results({
           onSelect={onSelect}
         />
       )}
+      <DataQualityCard analysis={analysis} detailed />
     </div>
   );
 }

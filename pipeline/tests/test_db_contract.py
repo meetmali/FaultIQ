@@ -155,14 +155,17 @@ def test_complete_stores_result_and_events_in_one_step(engine: Engine) -> None:
             "model": {"confidence": 0.97, "detector_score": 9.2},
         }],
     }  # fmt: skip
+    report = {"version": 1, "status": "accepted", "file": "a.csv", "issues": []}
     db.complete(
-        engine, job, result=result, series={"version": 1}, model_version="m", pipeline_version="p"
-    )
+        engine, job, result=result, series={"version": 1}, model_version="m", pipeline_version="p",
+        report=report,
+    )  # fmt: skip
     assert _status(engine, aid)[0] == "succeeded"
     with engine.connect() as conn:
         row = conn.execute(select(db.analyses).where(db.analyses.c.id == aid)).one()
         events = conn.execute(select(db.fault_events)).all()
     assert row.event_count == 1 and row.result["hours_alarmed"] == 5
+    assert row.processing_report == report
     assert [(e.event_key, e.fault, e.hours) for e in events] == [
         ("event-1", "condenser_fouling", 5)
     ]
@@ -183,8 +186,17 @@ def test_failure_keeps_a_safe_code_and_message(engine: Engine) -> None:
     (aid,) = _queue(engine)
     job = db.claim_next(engine, "w1", now=NOW)
     assert job is not None
-    db.fail(engine, job, "validation_failed", "The file failed validation: no timestamp column")
+    report = {"version": 1, "status": "quarantined", "file": "a.csv", "issues": []}
+    db.fail(
+        engine, job, "validation_failed", "The file failed validation: no timestamp column",
+        report=report,
+    )  # fmt: skip
     assert _status(engine, aid) == ("failed", 1, "validation_failed")
+    with engine.connect() as conn:
+        stored = conn.execute(
+            select(db.analyses.c.processing_report).where(db.analyses.c.id == aid)
+        ).scalar_one()
+    assert stored == report  # kept with the failure, so users see every reason (ADR 0027)
 
 
 def test_stale_jobs_are_retried_then_failed(engine: Engine) -> None:

@@ -118,6 +118,10 @@ curl -X POST localhost:8000/api/v1/analyses -H 'content-type: application/json' 
 curl localhost:8000/api/v1/analyses/<id>/result     # once its status is "succeeded"
 ```
 
+`/analyses/<id>/report` returns the upload's data-quality report: every validation issue, gaps and
+missing values, also for quarantined files. `/models` lists each model with its held-out results and
+the versions this installation has used (ADR 0027).
+
 Lists (`/equipment`, `/analyses`, `/fault-events`) take `page` and `page_size` (at most 100) and return
 `items`, `page`, `page_size` and `total`. Errors are RFC 9457 problems with a stable `code`.
 

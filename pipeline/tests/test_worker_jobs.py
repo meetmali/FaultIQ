@@ -106,3 +106,15 @@ def test_validation_failure_reports_the_reason(tmp_path: Path) -> None:
     assert exc.value.message.startswith("The file failed validation:")
     assert "bad.csv" not in exc.value.message  # the server's name for the file stays internal
     assert "export.csv" in exc.value.message and len(exc.value.message) < 1000
+    # The full data-quality report travels with the failure, in the user's terms (ADR 0027).
+    report = exc.value.report
+    assert report is not None and report["status"] == "quarantined"
+    assert report["file"] == "export.csv" and "bad.csv" not in json.dumps(report)
+    assert report["issues"] and all(i["severity"] in ("error", "warning") for i in report["issues"])
+
+
+def test_errors_before_validation_carry_no_report(tmp_path: Path) -> None:
+    settings = WorkerSettings(upload_dir=str(tmp_path), model_dir=str(tmp_path))
+    with pytest.raises(JobError) as missing:
+        analyse(_job(), settings, ModelStore(tmp_path))
+    assert missing.value.report is None

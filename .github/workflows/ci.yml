@@ -42,7 +42,7 @@ jobs:
       - run: dotnet test --no-build -c Release
       # The SQL script reviewers and the worker's contract test use must match the migrations.
       - run: dotnet tool restore
-      - run: dotnet ef migrations script --idempotent --no-build -c Release --project src/FaultIQ.Api -o /tmp/schema.sql
+      - run: dotnet ef migrations script --idempotent --no-build --configuration Release --project src/FaultIQ.Api -o /tmp/schema.sql
       - run: diff migrations/schema.sql /tmp/schema.sql
 
   pipeline:

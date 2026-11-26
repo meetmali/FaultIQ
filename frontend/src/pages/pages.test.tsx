@@ -17,6 +17,11 @@ vi.mock("../services/api", async (importOriginal) => {
     listFaultLibrary: vi.fn(),
     listEquipmentTypes: vi.fn(),
     dailyFaultHours: vi.fn(),
+    getEquipment: vi.fn(),
+    listAnalyses: vi.fn(),
+    getAnalysis: vi.fn(),
+    getAnalysisReport: vi.fn(),
+    listModels: vi.fn(),
   };
 });
 
@@ -102,5 +107,86 @@ describe("states", () => {
     renderRoute("/nowhere");
     expect(await screen.findByText("Page not found")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to the home page" })).toHaveAttribute("href", "/");
+  });
+});
+
+describe("data quality and models (ADR 0027)", () => {
+  const failed = {
+    id: "a9", upload_id: "u9", equipment_id: "e9", point_set: "all", status: "failed", attempts: 1,
+    created_at: "2026-11-25T10:00:00Z", started_at: "2026-11-25T10:00:01Z", finished_at: "2026-11-25T10:00:02Z",
+    error_code: "validation_failed", error_message: "The file failed validation: Timestamps go backwards 2 times.",
+    pipeline_version: null, model_version: null, hours_total: null, hours_scored: null, hours_alarmed: null, event_count: null,
+  };
+  const report = {
+    version: 1, status: "quarantined" as const, file: "Building A export.csv", sha256: "ab".repeat(32),
+    mapping: "lbnl_simulated", pipeline_version: "0.2.0",
+    issues: [
+      { severity: "warning" as const, code: "gaps", message: "3 gaps longer than one minute. Missing minutes are flagged, not filled." },
+      { severity: "error" as const, code: "timestamps_out_of_order", message: "Timestamps go backwards 2 times. Sort the export by time and upload it again." },
+    ],
+    load: { rows: 1440, unreadable_timestamps: 0, duplicate_timestamps: 0, gaps_over_1min: 3, dropout_rows: 0, unmapped_columns: ["Spare AI"], excluded_columns: {} },
+    missing_share: { sat: 0.25 },
+    grid: null,
+    operating: null,
+  };
+
+  beforeEach(() => {
+    vi.mocked(api.getEquipment).mockResolvedValue({ id: "e9", name: "RTU-9", site: null, created_at: "2026-11-25T09:00:00Z" });
+    vi.mocked(api.listAnalyses).mockResolvedValue({ ...empty, total: 1, items: [failed] });
+    vi.mocked(api.getAnalysis).mockResolvedValue(failed);
+  });
+
+  it("shows every reason a file was not accepted, with codes for technicians", async () => {
+    window.localStorage.setItem("faultiq.persona", "technician");
+    vi.mocked(api.getAnalysisReport).mockResolvedValue(report);
+    renderRoute("/equipment/e9?analysis=a9");
+    expect(await screen.findByText("Not accepted")).toBeInTheDocument();
+    expect(screen.getByText(/Sort the export by time and upload it again/)).toBeInTheDocument();
+    expect(screen.getByText(/Missing minutes are flagged, not filled/)).toBeInTheDocument();
+    expect(screen.getByText("timestamps_out_of_order")).toBeInTheDocument();
+    expect(screen.getByText("25%")).toBeInTheDocument();
+    expect(screen.getByText("Spare AI")).toBeInTheDocument();
+  });
+
+  it("gives operators the reasons in words, and says when there is no report", async () => {
+    vi.mocked(api.getAnalysisReport).mockResolvedValue(report);
+    const { unmount } = renderRoute("/equipment/e9?analysis=a9");
+    expect(await screen.findByText("Not accepted")).toBeInTheDocument();
+    expect(screen.queryByText("timestamps_out_of_order")).toBeNull();
+    unmount();
+
+    vi.mocked(api.getAnalysisReport).mockResolvedValue(null);
+    renderRoute("/equipment/e9?analysis=a9");
+    expect(await screen.findByText(/No data-quality report for this analysis/)).toBeInTheDocument();
+  });
+
+  it("lists each model with its held-out results and the versions used here", async () => {
+    const heldOut = {
+      test_hours: 10465, test_macro_f1: 0.7749, validation_macro_f1: 0.8389, answered_share: 0.9978,
+      named_fault_precision: 0.9049, right_fault_on_faulty_hours: 0.9227, calibration_error: 0.0775,
+    };
+    const model = {
+      format: "lbnl_simulated", point_set: "all", dataset: "simulated", dataset_label: "Simulated rooftop unit (LBNL)",
+      adopted_model: "lightgbm", trained_on: { train: "days 0-59", validation: "days 61-80" },
+      evaluation: "Day blocks: train on days 0-59, validate on 61-80, test on 82-99.", faults: ["condenser_fouling"],
+      held_out: heldOut,
+      versions: [{
+        model_version: "lbnl_simulated-all@diagnosis-0.1.0+abc123def456", pipeline_versions: ["0.2.0"], analyses: 3,
+        first_used_at: "2026-11-20T10:00:00Z", last_used_at: "2026-11-21T10:00:00Z",
+      }],
+    };
+    vi.mocked(api.listModels).mockResolvedValue({
+      diagnosis_version: "0.1.0", evaluated_with_pipeline_version: "0.2.0", evaluated_on: "2026-11-19",
+      target_named_fault_precision: 0.9,
+      items: [model, { ...model, point_set: "basic", adopted_model: "logistic", held_out: { ...heldOut, named_fault_precision: 0.8375 }, versions: [] }],
+    });
+    renderRoute("/models");
+    expect(await screen.findByRole("heading", { name: "All points" })).toBeInTheDocument();
+    expect(screen.getByText("LightGBM")).toBeInTheDocument();
+    expect(screen.getByText("meets the 90% target")).toBeInTheDocument();
+    expect(screen.getByText("below the 90% target")).toBeInTheDocument();
+    expect(screen.getByText("lbnl_simulated-all@diagnosis-0.1.0+abc123def456")).toBeInTheDocument();
+    expect(screen.getByText("No analysis has used this model yet.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Models" })).toHaveAttribute("aria-current", "page");
   });
 });

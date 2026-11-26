@@ -548,6 +548,50 @@
         }
       }
     },
+    "/api/v1/analyses/{id}/report": {
+      "get": {
+        "tags": [
+          "analyses"
+        ],
+        "operationId": "GetAnalysisReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fault-events": {
       "get": {
         "tags": [
@@ -893,6 +937,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LibraryFaultResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "operationId": "ListModels",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsResponse"
                 }
               }
             }
@@ -1503,6 +1567,48 @@
           }
         }
       },
+      "HeldOutResults": {
+        "required": [
+          "test_hours",
+          "test_macro_f1",
+          "validation_macro_f1",
+          "answered_share",
+          "named_fault_precision",
+          "right_fault_on_faulty_hours",
+          "calibration_error"
+        ],
+        "type": "object",
+        "properties": {
+          "test_hours": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "test_macro_f1": {
+            "type": "number",
+            "format": "double"
+          },
+          "validation_macro_f1": {
+            "type": "number",
+            "format": "double"
+          },
+          "answered_share": {
+            "type": "number",
+            "format": "double"
+          },
+          "named_fault_precision": {
+            "type": "number",
+            "format": "double"
+          },
+          "right_fault_on_faulty_hours": {
+            "type": "number",
+            "format": "double"
+          },
+          "calibration_error": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "IFormFile": {
         "type": "string",
         "format": "binary"
@@ -1649,6 +1755,129 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ModelResponse": {
+        "required": [
+          "format",
+          "point_set",
+          "dataset",
+          "dataset_label",
+          "adopted_model",
+          "trained_on",
+          "evaluation",
+          "faults",
+          "held_out",
+          "versions"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "point_set": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "dataset_label": {
+            "type": "string"
+          },
+          "adopted_model": {
+            "type": "string"
+          },
+          "trained_on": {
+            "$ref": "#/components/schemas/TrainingSplit"
+          },
+          "evaluation": {
+            "type": "string"
+          },
+          "faults": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "held_out": {
+            "$ref": "#/components/schemas/HeldOutResults"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelVersionUse"
+            }
+          }
+        }
+      },
+      "ModelVersionUse": {
+        "required": [
+          "model_version",
+          "pipeline_versions",
+          "analyses",
+          "first_used_at",
+          "last_used_at"
+        ],
+        "type": "object",
+        "properties": {
+          "model_version": {
+            "type": "string"
+          },
+          "pipeline_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "analyses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first_used_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ModelsResponse": {
+        "required": [
+          "diagnosis_version",
+          "evaluated_with_pipeline_version",
+          "evaluated_on",
+          "target_named_fault_precision",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "diagnosis_version": {
+            "type": "string"
+          },
+          "evaluated_with_pipeline_version": {
+            "type": "string"
+          },
+          "evaluated_on": {
+            "type": "string"
+          },
+          "target_named_fault_precision": {
+            "type": "number",
+            "format": "double"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelResponse"
+            }
           }
         }
       },
@@ -1921,6 +2150,21 @@
           }
         }
       },
+      "TrainingSplit": {
+        "required": [
+          "train",
+          "validation"
+        ],
+        "type": "object",
+        "properties": {
+          "train": {
+            "type": "string"
+          },
+          "validation": {
+            "type": "string"
+          }
+        }
+      },
       "UploadResponse": {
         "required": [
           "id",
@@ -1983,6 +2227,9 @@
     },
     {
       "name": "fault-library"
+    },
+    {
+      "name": "models"
     }
   ]
 }

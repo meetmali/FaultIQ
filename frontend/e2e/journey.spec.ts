@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
-import { event, faultTitle, mockApi } from "./fixtures";
+import { ANALYSIS_ID, EQUIPMENT_ID, event, faultTitle, mockApi } from "./fixtures";
 
 async function persona(page: Page, who: "operator" | "technician", theme: "light" | "dark" = "light") {
   await page.addInitScript(
@@ -66,6 +66,23 @@ test("technician: work queue to the workbench, the fault library and back", asyn
   await noA11yViolations(page);
   await page.getByRole("link", { name: "Back to the diagnosis" }).click();
   await expect(page).toHaveURL(new RegExp(`event=${event.id}`));
+});
+
+test("technician: the data-quality report and the model behind a result (ADR 0027)", async ({ page }) => {
+  await persona(page, "technician", "light");
+  await mockApi(page);
+  await page.goto(`/equipment/${EQUIPMENT_ID}?analysis=${ANALYSIS_ID}`);
+  const quality = page.getByRole("region", { name: "Data quality" });
+  await expect(quality.getByText("Accepted with warnings")).toBeVisible();
+  await expect(quality.getByText(/Missing minutes are flagged, not filled/)).toBeVisible();
+  await noA11yViolations(page);
+
+  await page.getByRole("link", { name: "lbnl_simulated-all@diagnosis-0.1.0+fixture" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Models" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All points" }).first()).toBeVisible();
+  await expect(page.getByText("lbnl_simulated-all@diagnosis-0.1.0+fixture")).toBeVisible();
+  await noPlaceholders(page);
+  await noA11yViolations(page);
 });
 
 test("the equipment switcher announces types that aren't supported yet", async ({ page }) => {

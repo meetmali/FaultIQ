@@ -27,6 +27,7 @@ from faultiq.explain.series import build_series
 from faultiq.explain.workflow import analyse_file
 from faultiq.ingestion.mapping import bundled_mapping
 from faultiq.pipeline import process_file
+from faultiq.quality import quality_report
 from worker import db
 from worker.config import WorkerSettings
 
@@ -37,10 +38,11 @@ tracer = trace.get_tracer("faultiq.worker")
 class JobError(Exception):
     """A failure with a stable code and a message that is safe to show users."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, report: dict[str, Any] | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.report = report  # the data-quality report, when validation ran (ADR 0027)
 
 
 @dataclass(frozen=True)
@@ -48,14 +50,15 @@ class Outcome:
     result: dict[str, Any]
     series: dict[str, Any]
     model_version: str
+    report: dict[str, Any]
 
 
 MAX_REASON = 240  # characters per reason; a missing-column list can run to thousands
 
 
-def _validation_message(report_path: Path, job: db.Job) -> str:
-    """The first few validation errors, in the user's terms: their file name, not the server's."""
-    report = json.loads(report_path.read_text())
+def _validation_message(report: dict[str, Any], job: db.Job) -> str:
+    """The first few validation errors, in the user's terms: their file name, not the server's.
+    The full list is in the data-quality report stored with the analysis."""
     issues = report.get("validation", {}).get("issues", [])
     reasons = []
     for issue in issues:
@@ -88,10 +91,12 @@ def analyse(job: db.Job, settings: WorkerSettings, store: ModelStore) -> Outcome
         tracer.start_as_current_span("validate_and_preprocess"),
     ):
         outcome = process_file(path, bundled_mapping(mapping_name), Path(tmp))
+        raw_report = json.loads((Path(tmp) / outcome.report).read_text())
+        report = db.as_json(
+            quality_report(raw_report, job.stored_name, job.original_name).model_dump(mode="json")
+        )
         if outcome.status == "quarantined" or outcome.output is None:
-            raise JobError(
-                "validation_failed", _validation_message(Path(tmp) / outcome.report, job)
-            )
+            raise JobError("validation_failed", _validation_message(raw_report, job), report)
         minutes = pl.read_parquet(Path(tmp) / outcome.output)
 
     with tracer.start_as_current_span("detect_diagnose_explain"):
@@ -102,12 +107,13 @@ def analyse(job: db.Job, settings: WorkerSettings, store: ModelStore) -> Outcome
             raise JobError(
                 "explanation_rejected",
                 "The explanation failed its evidence checks, so no result was published.",
+                report,
             ) from exc
     with tracer.start_as_current_span("chart_series"):
         diag = model.diagnoser
         series = build_series(minutes, result, diag.models, hours, diag.ranges)
     return Outcome(
-        db.as_json(result.model_dump(mode="json")), db.as_json(series), model.model_version
+        db.as_json(result.model_dump(mode="json")), db.as_json(series), model.model_version, report
     )
 
 
@@ -133,7 +139,7 @@ def process_one(engine: Engine, store: ModelStore, settings: WorkerSettings, wor
         try:
             out = analyse(job, settings, store)
             db.complete(
-                engine, job, result=out.result, series=out.series,
+                engine, job, result=out.result, series=out.series, report=out.report,
                 model_version=out.model_version, pipeline_version=faultiq.PIPELINE_VERSION,
             )  # fmt: skip
             log.info(
@@ -144,7 +150,7 @@ def process_one(engine: Engine, store: ModelStore, settings: WorkerSettings, wor
                 },
             )  # fmt: skip
         except JobError as exc:
-            db.fail(engine, job, exc.code, exc.message)
+            db.fail(engine, job, exc.code, exc.message, report=exc.report)
             span.set_attribute("faultiq.error_code", exc.code)
             log.warning(
                 "job_failed", extra={"job": str(job.id), "code": exc.code, "trace_id": trace_id}

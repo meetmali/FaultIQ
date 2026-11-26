@@ -21,6 +21,9 @@ export type LibrarySource = Schemas["LibrarySource"];
 export type CitedText = Schemas["CitedText"];
 export type EquipmentTypeResponse = Schemas["EquipmentTypeResponse"];
 export type DailyFaultHours = Schemas["DailyFaultHours"];
+export type ModelsResponse = Schemas["ModelsResponse"];
+export type ModelResponse = Schemas["ModelResponse"];
+export type ModelVersionUse = Schemas["ModelVersionUse"];
 
 /** Derived equipment status (ADR 0025). */
 export type EquipmentStatus = "no_data" | "analysing" | "analysis_failed" | "fault" | "abnormal" | "normal";
@@ -59,6 +62,8 @@ export type {
   Source,
   Statement,
 } from "./generated/diagnostic-result";
+
+export type { DataQualityReport, QualityIssue } from "./generated/data-quality-report";
 
 /** One hourly column in chart series v2 (ADR 0026). */
 export interface HourlyColumn {

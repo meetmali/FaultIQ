@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "openapi-typescript ../docs/contracts/openapi.json -o src/types/generated/api.ts && json2ts -i ../docs/contracts/diagnostic-result.schema.json -o src/types/generated/diagnostic-result.ts --no-additionalProperties --bannerComment \"/* Generated from docs/contracts/diagnostic-result.schema.json. Do not edit by hand. Run npm run generate:api. */\"",
+    "generate:api": "openapi-typescript ../docs/contracts/openapi.json -o src/types/generated/api.ts && json2ts -i ../docs/contracts/diagnostic-result.schema.json -o src/types/generated/diagnostic-result.ts --no-additionalProperties --bannerComment \"/* Generated from docs/contracts/diagnostic-result.schema.json. Do not edit by hand. Run npm run generate:api. */\" && json2ts -i ../docs/contracts/data-quality-report.schema.json -o src/types/generated/data-quality-report.ts --no-additionalProperties --bannerComment \"/* Generated from docs/contracts/data-quality-report.schema.json. Do not edit by hand. Run npm run generate:api. */\"",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "GridSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "inserted_missing_rows": {
+          "description": "Missing steps flagged as not observed, not filled",
+          "type": "integer"
+        },
+        "output_rows": {
+          "type": "integer"
+        },
+        "segments": {
+          "description": "Continuous stretches; a gap over an hour starts a new one",
+          "type": "integer"
+        },
+        "step_seconds": {
+          "description": "The file's sampling interval",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "step_seconds",
+        "segments",
+        "inserted_missing_rows",
+        "output_rows"
+      ],
+      "title": "GridSummary",
+      "type": "object"
+    },
+    "LoadSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "dropout_rows": {
+          "description": "Rows where every probe sensor read exactly 0",
+          "type": "integer"
+        },
+        "duplicate_timestamps": {
+          "type": "integer"
+        },
+        "excluded_columns": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Columns the mapping excludes, with why",
+          "type": "object"
+        },
+        "gaps_over_1min": {
+          "type": "integer"
+        },
+        "rows": {
+          "description": "Data rows read from the file",
+          "type": "integer"
+        },
+        "unmapped_columns": {
+          "description": "Columns ignored because the mapping omits them",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unreadable_timestamps": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rows",
+        "unreadable_timestamps",
+        "duplicate_timestamps",
+        "gaps_over_1min",
+        "dropout_rows",
+        "unmapped_columns",
+        "excluded_columns"
+      ],
+      "title": "LoadSummary",
+      "type": "object"
+    },
+    "OperatingSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "mode_share": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Share of rows in each operating mode",
+          "type": "object"
+        },
+        "steady_share": {
+          "description": "Share of rows in steady state",
+          "type": "number"
+        }
+      },
+      "required": [
+        "steady_share",
+        "mode_share"
+      ],
+      "title": "OperatingSummary",
+      "type": "object"
+    },
+    "QualityIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "description": "Stable code, e.g. timestamps_out_of_order",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong and, where possible, how to fix it",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "title": "QualityIssue",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/meetmali/FaultIQ/data-quality-report/1",
+  "additionalProperties": false,
+  "description": "What FaultIQ found in one uploaded file before any analysis ran.",
+  "properties": {
+    "file": {
+      "description": "The user's file name, for display only",
+      "type": "string"
+    },
+    "grid": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GridSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Absent when the file was quarantined"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/QualityIssue"
+      },
+      "type": "array"
+    },
+    "load": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/LoadSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Absent when the columns could not be read"
+    },
+    "mapping": {
+      "description": "Point mapping used to read the file",
+      "type": "string"
+    },
+    "missing_share": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "Share of rows with no usable value, per sensor role, after loading",
+      "type": "object"
+    },
+    "operating": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OperatingSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Absent when quarantined"
+    },
+    "pipeline_version": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "accepted",
+        "accepted_with_warnings",
+        "quarantined"
+      ],
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "status",
+    "file",
+    "sha256",
+    "mapping",
+    "pipeline_version",
+    "issues"
+  ],
+  "title": "DataQualityReport",
+  "type": "object"
+}

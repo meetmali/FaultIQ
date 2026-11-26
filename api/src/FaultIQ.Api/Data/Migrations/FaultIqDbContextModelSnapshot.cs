@@ -91,6 +91,10 @@ namespace FaultIQ.Api.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("point_set");
 
+                    b.Property<string>("ProcessingReport")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("processing_report");
+
                     b.Property<string>("Result")
                         .HasColumnType("jsonb")
                         .HasColumnName("result");

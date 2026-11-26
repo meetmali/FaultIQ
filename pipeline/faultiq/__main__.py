@@ -5,6 +5,7 @@ python -m faultiq process <file.csv> --mapping <mapping.toml> [--out DIR]
 python -m faultiq draft-mapping <file.csv> [--name NAME]
 python -m faultiq train-models <processed-dir> [--out DIR]
 python -m faultiq export-library <diagnosis-results.json> --out FILE
+python -m faultiq export-models <diagnosis-results.json> --out FILE
 """
 
 from __future__ import annotations
@@ -49,6 +50,10 @@ def main(argv: list[str] | None = None) -> int:
     p_lib.add_argument("results", type=Path, help="docs/diagnosis/results.json")
     p_lib.add_argument("--out", type=Path, required=True)
 
+    p_reg = sub.add_parser("export-models", help="write the model registry the API serves")
+    p_reg.add_argument("results", type=Path, help="docs/diagnosis/results.json")
+    p_reg.add_argument("--out", type=Path, required=True)
+
     args = parser.parse_args(argv)
     configure_logging(args.log_level)
 
@@ -59,6 +64,15 @@ def main(argv: list[str] | None = None) -> int:
         from faultiq.explain.library_export import library_json
 
         args.out.write_text(library_json(fault_library(), json.loads(args.results.read_text())))
+        print(f"Wrote {args.out}")
+        return 0
+
+    if args.command == "export-models":
+        import json
+
+        from faultiq.explain.registry import registry_json
+
+        args.out.write_text(registry_json(json.loads(args.results.read_text())))
         print(f"Wrote {args.out}")
         return 0
 

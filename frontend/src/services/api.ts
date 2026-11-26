@@ -3,6 +3,7 @@ import type {
   DailyFaultHours,
   EquipmentTypeResponse,
   ChartSeries,
+  DataQualityReport,
   DiagnosticResult,
   EquipmentOverview,
   EquipmentResponse,
@@ -10,6 +11,7 @@ import type {
   FaultEventSummaryResponse,
   FaultLibraryResponse,
   LibraryFaultResponse,
+  ModelsResponse,
   SiteResponse,
   HealthResponse,
   Paged,
@@ -106,6 +108,19 @@ export const getAnalysisResult = (id: string, signal?: AbortSignal) =>
 
 export const getAnalysisSeries = (id: string, signal?: AbortSignal) =>
   request<ChartSeries>(`/analyses/${encodeURIComponent(id)}/series`, { signal });
+
+/** The upload's data-quality report (ADR 0027). Resolves to null when the analysis has none. */
+export async function getAnalysisReport(id: string, signal?: AbortSignal): Promise<DataQualityReport | null> {
+  try {
+    return await request<DataQualityReport>(`/analyses/${encodeURIComponent(id)}/report`, { signal });
+  } catch (err) {
+    if (err instanceof ApiError && err.code === "report_not_available") return null;
+    throw err;
+  }
+}
+
+/** Model families with held-out results, joined with the versions recorded on analyses (ADR 0027). */
+export const listModels = () => request<ModelsResponse>("/models");
 
 export const listFaultEvents = (query?: {
   equipment_id?: string;

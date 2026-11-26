@@ -106,6 +106,32 @@ public static class AnalysisEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // The data-quality report: every validation issue, completeness and operation (ADR 0027).
+        // Stored for succeeded and quarantined jobs, so it is served for failed analyses too.
+        g.MapGet("/{id:guid}/report", async Task<IResult> (Guid id, FaultIqDbContext db, CancellationToken ct) =>
+            {
+                var row = await db.Analyses.AsNoTracking().Where(a => a.Id == id)
+                    .Select(a => new { a.Status, Json = a.ProcessingReport }).FirstOrDefaultAsync(ct);
+                if (row is null)
+                {
+                    return Problems.NotFound("Analysis");
+                }
+
+                if (row.Json is not null)
+                {
+                    return TypedResults.Text(row.Json, "application/json");
+                }
+
+                return row.Status is AnalysisStatus.Queued or AnalysisStatus.Running
+                    ? Problems.Of(StatusCodes.Status409Conflict, "result_not_ready", "The analysis has not finished yet.")
+                    : Problems.Of(StatusCodes.Status404NotFound, "report_not_available",
+                        "This analysis has no data-quality report: it stopped before the file was validated, or it ran before reports were kept.");
+            })
+            .WithName("GetAnalysisReport")
+            .Produces(StatusCodes.Status200OK, contentType: "application/json")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         return api;
     }
 

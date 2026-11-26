@@ -14,6 +14,7 @@ const NAV = [
   { to: "/", label: "Home", end: true },
   { to: "/units", label: "Units", end: false },
   { to: "/library", label: "Fault Library", end: false },
+  { to: "/models", label: "Models", end: false },
 ];
 
 // Shown before the catalogue loads, or if the API can't be reached.

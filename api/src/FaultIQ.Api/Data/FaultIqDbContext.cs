@@ -49,6 +49,7 @@ public sealed class FaultIqDbContext(DbContextOptions<FaultIqDbContext> options)
             e.Property(x => x.ModelVersion).HasMaxLength(200);
             e.Property(x => x.Result).HasColumnType("jsonb");
             e.Property(x => x.ChartSeries).HasColumnType("jsonb");
+            e.Property(x => x.ProcessingReport).HasColumnType("jsonb");
             e.HasOne(x => x.Upload).WithMany().HasForeignKey(x => x.UploadId)
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId)

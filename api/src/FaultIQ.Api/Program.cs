@@ -43,6 +43,7 @@ builder.Services.AddFaultIqHosting(builder.Configuration);
 builder.Services.AddFaultIqPersistence(builder.Configuration);
 builder.Services.AddFaultIqTelemetry(builder.Configuration);
 builder.Services.AddSingleton<FaultLibraryStore>();
+builder.Services.AddSingleton<ModelRegistryStore>();
 
 // Uploads may be up to Uploads:MaxSizeMb; allow 1 MB on top for the multipart envelope.
 var maxUpload = (builder.Configuration.GetValue<int?>("Uploads:MaxSizeMb") ?? 100) * 1024L * 1024L;
@@ -69,6 +70,7 @@ v1.MapAnalysisEndpoints();
 v1.MapFaultEventEndpoints();
 v1.MapFaultLibraryEndpoints();
 v1.MapEquipmentTypeEndpoints();
+v1.MapModelEndpoints();
 
 await app.MigrateIfConfiguredAsync();
 

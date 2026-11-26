@@ -65,6 +65,12 @@ public sealed class Analysis
 
     /// <summary>Downsampled, ready-to-draw chart series written by the worker (ADR 0009).</summary>
     public string? ChartSeries { get; set; }
+
+    /// <summary>
+    /// The DataQualityReport JSON (docs/contracts/data-quality-report.schema.json), written by the
+    /// worker on success and on quarantine (ADR 0027). Null when the job failed before validation.
+    /// </summary>
+    public string? ProcessingReport { get; set; }
 }
 
 /// <summary>Summary of one fault event, so events can be listed and filtered across analyses.</summary>

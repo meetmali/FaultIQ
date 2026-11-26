@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { usePreferences } from "../../app/preferences";
 import { IsometricRtu } from "../../components/illustrations/IsometricRtu";
 import { COMPONENT_LABEL, isComponent, type UnitState } from "../../components/illustrations/components";
+import { DataQualityCard } from "../../components/DataQuality";
 import { Empty, ErrorState, Loading, QueryView } from "../../components/QueryState";
 import { Badge, Button, Card, CardTitle } from "../../components/ui";
 import { HealthStrip, Meter, type StripSegment } from "../../components/visuals";
@@ -42,7 +43,10 @@ export default function OperatorUnit() {
         <QueryView query={analysis}>
           {(a) =>
             a.status === "failed" ? (
-              <Card><CardTitle>We couldn't analyse this unit's data</CardTitle><p className="text-sm text-ink-2">{a.error_message}</p></Card>
+              <div className="space-y-6">
+                <Card><CardTitle>We couldn't analyse this unit's data</CardTitle><p className="text-sm text-ink-2">{a.error_message}</p></Card>
+                <DataQualityCard analysis={a} detailed={false} />
+              </div>
             ) : a.status !== "succeeded" ? (
               <Card><Loading label="FaultIQ is checking this unit's data. This page updates by itself." /></Card>
             ) : (
@@ -190,6 +194,7 @@ function UnitStory({
       )}
 
       <BeforeAfter history={history} current={analysis} />
+      <DataQualityCard analysis={analysis} detailed={false} />
     </div>
   );
 }
