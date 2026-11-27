@@ -335,6 +335,235 @@ namespace FaultIQ.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Assignee")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("assignee");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("cancel_reason");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("Checks")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("checks");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("ConfirmedFault")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("confirmed_fault");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("equipment_id");
+
+                    b.Property<string>("Fault")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("fault");
+
+                    b.Property<string>("Findings")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("findings");
+
+                    b.Property<string>("LibraryReviewStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("library_review_status");
+
+                    b.Property<int>("LibraryVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("library_version");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Number"));
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("PriorityReason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("priority_reason");
+
+                    b.Property<DateTimeOffset?>("RepairTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("repair_time");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SuggestedPriority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("suggested_priority");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_work_orders");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_work_orders_number");
+
+                    b.HasIndex("EquipmentId", "CreatedAt")
+                        .HasDatabaseName("ix_work_orders_equipment_id_created_at");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_work_orders_status_created_at");
+
+                    b.ToTable("work_orders", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_work_orders_cancelled", "status <> 'cancelled' OR (cancel_reason IS NOT NULL AND cancelled_at IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_work_orders_completed", "status <> 'completed' OR (outcome IS NOT NULL AND findings IS NOT NULL AND completed_at IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_work_orders_outcome", "outcome IS NULL OR outcome IN ('confirmed', 'different_fault', 'no_fault_found')");
+
+                            t.HasCheckConstraint("ck_work_orders_priority", "priority IN ('urgent', 'high', 'medium', 'low')");
+
+                            t.HasCheckConstraint("ck_work_orders_status", "status IN ('open', 'in_progress', 'completed', 'cancelled')");
+
+                            t.HasCheckConstraint("ck_work_orders_suggested_priority", "suggested_priority IN ('urgent', 'high', 'medium', 'low')");
+                        });
+                });
+
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrderEvent", b =>
+                {
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("work_order_id");
+
+                    b.Property<Guid>("FaultEventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fault_event_id");
+
+                    b.HasKey("WorkOrderId", "FaultEventId")
+                        .HasName("pk_work_order_events");
+
+                    b.HasIndex("FaultEventId")
+                        .HasDatabaseName("ix_work_order_events_fault_event_id");
+
+                    b.ToTable("work_order_events", (string)null);
+                });
+
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrderLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("from_status");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2500)
+                        .HasColumnType("character varying(2500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("RecordedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("recorded_by");
+
+                    b.Property<long>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Sequence"));
+
+                    b.Property<string>("ToStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("to_status");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("work_order_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_work_order_log");
+
+                    b.HasIndex("WorkOrderId", "Sequence")
+                        .HasDatabaseName("ix_work_order_log_work_order_id_sequence");
+
+                    b.ToTable("work_order_log", (string)null);
+                });
+
             modelBuilder.Entity("FaultIQ.Api.Data.Analysis", b =>
                 {
                     b.HasOne("FaultIQ.Api.Data.Equipment", null)
@@ -381,6 +610,43 @@ namespace FaultIQ.Api.Data.Migrations
                         .HasConstraintName("fk_uploads_equipment_equipment_id");
 
                     b.Navigation("Equipment");
+                });
+
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrder", b =>
+                {
+                    b.HasOne("FaultIQ.Api.Data.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_orders_equipment_equipment_id");
+                });
+
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrderEvent", b =>
+                {
+                    b.HasOne("FaultIQ.Api.Data.FaultEvent", null)
+                        .WithMany()
+                        .HasForeignKey("FaultEventId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_order_events_fault_events_fault_event_id");
+
+                    b.HasOne("FaultIQ.Api.Data.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_order_events_work_orders_work_order_id");
+                });
+
+            modelBuilder.Entity("FaultIQ.Api.Data.WorkOrderLogEntry", b =>
+                {
+                    b.HasOne("FaultIQ.Api.Data.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_work_order_log_work_orders_work_order_id");
                 });
 #pragma warning restore 612, 618
         }

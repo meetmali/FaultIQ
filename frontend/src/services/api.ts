@@ -12,6 +12,11 @@ import type {
   FaultLibraryResponse,
   LibraryFaultResponse,
   ModelsResponse,
+  CreateWorkOrderRequest,
+  UpdateWorkOrderRequest,
+  WorkOrderResponse,
+  WorkOrderSummary,
+  WorkOrderTransitionRequest,
   SiteResponse,
   HealthResponse,
   Paged,
@@ -121,6 +126,43 @@ export async function getAnalysisReport(id: string, signal?: AbortSignal): Promi
 
 /** Model families with held-out results, joined with the versions recorded on analyses (ADR 0027). */
 export const listModels = () => request<ModelsResponse>("/models");
+
+// Work orders (ADR 0028). Every change sends the order's version as If-Match, so an edit made by
+// someone else in the meantime is refused (412) instead of silently overwritten.
+
+export type WorkOrderFilters = {
+  status?: string;
+  priority?: string;
+  fault?: string;
+  equipment_id?: string;
+  site?: string;
+  event_id?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export const listWorkOrders = (query?: WorkOrderFilters) => request<Paged<WorkOrderSummary>>("/work-orders", { query });
+
+export const getWorkOrder = (id: string, signal?: AbortSignal) =>
+  request<WorkOrderResponse>(`/work-orders/${encodeURIComponent(id)}`, { signal });
+
+export const createWorkOrder = (body: CreateWorkOrderRequest) => request<WorkOrderResponse>("/work-orders", json(body));
+
+const versioned = (method: string, version: number, body: unknown): RequestInit => ({
+  method,
+  headers: { "content-type": "application/json", "if-match": `"${version}"` },
+  body: JSON.stringify(body),
+});
+
+export const updateWorkOrder = (id: string, version: number, body: UpdateWorkOrderRequest) =>
+  request<WorkOrderResponse>(`/work-orders/${encodeURIComponent(id)}`, versioned("PATCH", version, body));
+
+export const transitionWorkOrder = (id: string, version: number, body: WorkOrderTransitionRequest) =>
+  request<WorkOrderResponse>(`/work-orders/${encodeURIComponent(id)}/transitions`, versioned("POST", version, body));
+
+/** Link target for the CSV export, with the list's filters. */
+export const workOrdersExportUrl = (query?: Omit<WorkOrderFilters, "page" | "page_size" | "event_id">) =>
+  url("/work-orders/export", query);
 
 export const listFaultEvents = (query?: {
   equipment_id?: string;

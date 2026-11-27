@@ -67,3 +67,13 @@ public sealed class DatabaseFactAttribute : FactAttribute
         }
     }
 }
+
+/// <summary>
+/// Test classes that recreate the shared test database run one after another, never in parallel,
+/// because each one drops and migrates the same database.
+/// </summary>
+[CollectionDefinition(Name)]
+public sealed class DatabaseCollection
+{
+    public const string Name = "PostgreSQL";
+}

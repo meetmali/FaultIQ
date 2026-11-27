@@ -95,6 +95,104 @@ public sealed class FaultEvent
     public DateTimeOffset? ReviewedAt { get; set; }
 }
 
+/// <summary>
+/// A person's request to check and fix a diagnosed fault on one unit (ADR 0028). The outcome
+/// recorded on completion is a human label, kept apart from the model's stored result.
+/// </summary>
+public sealed class WorkOrder
+{
+    public Guid Id { get; set; }
+
+    /// <summary>Display number from an identity column, shown as WO-0007.</summary>
+    public int Number { get; set; }
+
+    public Guid EquipmentId { get; set; }
+
+    /// <summary>The fault the events name, or null when they name none.</summary>
+    public string? Fault { get; set; }
+
+    public required string Title { get; set; }
+    public required string Status { get; set; }
+    public required string Priority { get; set; }
+    public required string SuggestedPriority { get; set; }
+    public required string PriorityReason { get; set; }
+
+    /// <summary>Typed text, not a verified identity.</summary>
+    public string? Assignee { get; set; }
+
+    public string? Notes { get; set; }
+
+    /// <summary>The fault library's checks, copied word for word with their source ids (JSON).</summary>
+    public required string Checks { get; set; }
+
+    public int LibraryVersion { get; set; }
+    public required string LibraryReviewStatus { get; set; }
+    public string? Outcome { get; set; }
+    public string? ConfirmedFault { get; set; }
+    public string? Findings { get; set; }
+
+    /// <summary>When the repair was made, as recorded in the unit's data (ADR 0025).</summary>
+    public DateTimeOffset? RepairTime { get; set; }
+
+    public string? CancelReason { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? StartedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public DateTimeOffset? CancelledAt { get; set; }
+
+    /// <summary>PostgreSQL's xmin row version, the optimistic concurrency token (ETag).</summary>
+    public uint Version { get; set; }
+}
+
+/// <summary>Links a work order to one of the fault events it was opened from.</summary>
+public sealed class WorkOrderEvent
+{
+    public Guid WorkOrderId { get; set; }
+    public Guid FaultEventId { get; set; }
+}
+
+/// <summary>Append-only history of a work order, written in the same transaction as each change.</summary>
+public sealed class WorkOrderLogEntry
+{
+    public Guid Id { get; set; }
+
+    /// <summary>Insertion order from an identity column: entries saved together share a timestamp.</summary>
+    public long Sequence { get; set; }
+
+    public Guid WorkOrderId { get; set; }
+    public DateTimeOffset At { get; set; }
+    public required string Action { get; set; }
+    public string? FromStatus { get; set; }
+    public string? ToStatus { get; set; }
+    public string? Note { get; set; }
+
+    /// <summary>Typed text, not a verified identity.</summary>
+    public string? RecordedBy { get; set; }
+}
+
+public static class WorkOrderStatuses
+{
+    public const string Open = "open";
+    public const string InProgress = "in_progress";
+    public const string Completed = "completed";
+    public const string Cancelled = "cancelled";
+    public static readonly string[] All = [Open, InProgress, Completed, Cancelled];
+    public static readonly string[] Active = [Open, InProgress];
+}
+
+public static class WorkOrderPriorities
+{
+    public static readonly string[] All = ["urgent", "high", "medium", "low"];
+}
+
+public static class WorkOrderOutcomes
+{
+    public const string Confirmed = "confirmed";
+    public const string DifferentFault = "different_fault";
+    public const string NoFaultFound = "no_fault_found";
+    public static readonly string[] All = [Confirmed, DifferentFault, NoFaultFound];
+}
+
 public static class ReviewStatuses
 {
     public const string Unreviewed = "unreviewed";

@@ -24,6 +24,13 @@ export type DailyFaultHours = Schemas["DailyFaultHours"];
 export type ModelsResponse = Schemas["ModelsResponse"];
 export type ModelResponse = Schemas["ModelResponse"];
 export type ModelVersionUse = Schemas["ModelVersionUse"];
+export type WorkOrderResponse = Schemas["WorkOrderResponse"];
+export type WorkOrderSummary = Schemas["WorkOrderSummary"];
+export type WorkOrderCheck = Schemas["WorkOrderCheck"];
+export type WorkOrderVerification = Schemas["WorkOrderVerification"];
+export type CreateWorkOrderRequest = Schemas["CreateWorkOrderRequest"];
+export type UpdateWorkOrderRequest = Schemas["UpdateWorkOrderRequest"];
+export type WorkOrderTransitionRequest = Schemas["WorkOrderTransitionRequest"];
 
 /** Derived equipment status (ADR 0025). */
 export type EquipmentStatus = "no_data" | "analysing" | "analysis_failed" | "fault" | "abnormal" | "normal";

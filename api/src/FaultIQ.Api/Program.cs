@@ -71,6 +71,7 @@ v1.MapFaultEventEndpoints();
 v1.MapFaultLibraryEndpoints();
 v1.MapEquipmentTypeEndpoints();
 v1.MapModelEndpoints();
+v1.MapWorkOrderEndpoints();
 
 await app.MigrateIfConfiguredAsync();
 

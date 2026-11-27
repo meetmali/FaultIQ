@@ -125,3 +125,32 @@ test("errors offer a retry, and demo mode labels sample data and hides uploads",
   await expect(page.getByText("sample data").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Analyse new data" })).toHaveCount(0);
 });
+
+test("technician: an event becomes a work order, is worked and completed (ADR 0028)", async ({ page }) => {
+  await persona(page, "technician", "dark");
+  await mockApi(page);
+  await page.goto(`/equipment/${EQUIPMENT_ID}?analysis=${ANALYSIS_ID}&event=${event.id}`);
+  const panel = page.getByRole("region", { name: "Work order" });
+  await panel.getByRole("button", { name: "Create work order" }).click();
+  await panel.getByLabel("Assign to (optional)").fill("Alex, contractor");
+  await panel.getByRole("button", { name: "Create work order" }).click();
+
+  await expect(page.getByRole("heading", { level: 1, name: `WO-0001: ${faultTitle}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Checks to make on site" })).toBeVisible();
+  await expect(page.getByText(/hasn't yet been reviewed by an HVAC professional/)).toBeVisible();
+  await noPlaceholders(page);
+  await noA11yViolations(page);
+
+  await page.getByRole("button", { name: "Start work" }).click();
+  await page.getByRole("button", { name: "Complete…" }).click();
+  await page.getByLabel(/Repair time/).fill("2018-10-16T09:00");
+  await page.getByLabel("What was found and done").fill("Coil half blocked; cleaned, both fans run.");
+  await page.getByRole("button", { name: "Complete work order" }).click();
+  await expect(page.getByRole("heading", { name: "Outcome and verification" })).toBeVisible();
+  await expect(page.getByText("Waiting for new data").first()).toBeVisible();
+  await noA11yViolations(page);
+
+  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Work orders" }).click();
+  await page.getByLabel("Status").selectOption("");
+  await expect(page.getByRole("link", { name: "WO-0001" })).toBeVisible();
+});

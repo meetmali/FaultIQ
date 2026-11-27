@@ -6,14 +6,15 @@ scheduling or prediction, no commands to equipment, no generated instructions, n
 | Slice | Features | Status |
 |-------|----------|--------|
 | A | Data-quality report, models page (`GET /api/v1/models`) | **Built**, ADR 0027 |
-| B | Work orders, fix verification, handoff export (CSV) | Proposed, after Phase 8 |
+| B | Work orders, fix verification, handoff export (CSV) | **Built**, ADR 0028 (ahead of Phase 8, by the owner's choice) |
 | C | Measured energy impact, field accuracy | Proposed, after Phase 8 |
 
 Slice A closes two items on the README's own MVP list. Slices B and C are extensions: README
 section 19 asks that extensions wait until the core workflow is validated, which is Phase 8's job.
-Each needs its own ADR before code.
+The owner chose to build slice B before Phase 8 (ADR 0028). Slice C still needs its own ADR before
+code.
 
-## Slice B (proposed)
+## Slice B (built; see ADR 0028 for what changed from this sketch)
 
 - **Work orders.**
   - A person opens a work order from one or more fault events on one unit.

@@ -22,6 +22,7 @@ vi.mock("../services/api", async (importOriginal) => {
     getAnalysis: vi.fn(),
     getAnalysisReport: vi.fn(),
     listModels: vi.fn(),
+    listWorkOrders: vi.fn(),
   };
 });
 
@@ -43,6 +44,7 @@ beforeEach(() => {
   vi.mocked(api.summariseFaultEvents).mockResolvedValue({ items: [], events: 0, hours: 0 });
   vi.mocked(api.listFaultLibrary).mockResolvedValue({ review_status: "unreviewed", sources: [], items: [] });
   vi.mocked(api.dailyFaultHours).mockResolvedValue([]);
+  vi.mocked(api.listWorkOrders).mockResolvedValue({ items: [], page: 1, page_size: 5, total: 0 });
   vi.mocked(api.listEquipmentTypes).mockResolvedValue([
     { id: "rtu", name: "Rooftop units", status: "available", description: "" },
     { id: "ahu", name: "Air handling units", status: "coming_soon", description: "" },

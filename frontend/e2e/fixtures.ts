@@ -117,6 +117,54 @@ export async function mockApi(p: Page, { demo = false, failOverview = false } = 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: status >= 400 ? "application/problem+json" : "application/json", body: JSON.stringify(body) });
 
+  // A tiny in-memory work-order store (ADR 0028), enough for one order's life in a journey.
+  const orders: Record<string, unknown>[] = [];
+  const workOrders = (route: Route, path: string, url: URL): Promise<void> | undefined => {
+    const method = route.request().method();
+    const body = route.request().postDataJSON() as Record<string, unknown> | null;
+    const at = "2026-11-27T09:00:00Z";
+    if (path === "/work-orders" && method === "POST") {
+      const row = eventRows.find((r: { id: string }) => r.id === (body?.event_ids as string[])[0]);
+      const fault = library.faults.find((f: { id: string }) => f.id === row.fault);
+      const order = {
+        id: "0190a1f3-0000-7000-8000-0000000002aa", number: 1, code: "WO-0001", equipment_id: EQUIPMENT_ID,
+        equipment_name: "RTU-1", site: "Simulated office", fault: row.fault, title: fault.title, status: "open",
+        priority: body?.priority ?? "high", suggested_priority: "high",
+        priority_reason: `A named fault lasting ${row.hours} h; long events are the most reliable.`,
+        assignee: body?.assignee ?? null, notes: body?.notes ?? null, checks: fault.checks,
+        library_version: library.version, library_review_status: library.review_status, outcome: null,
+        confirmed_fault: null, findings: null, repair_time: null, cancel_reason: null, created_at: at,
+        started_at: null, completed_at: null, cancelled_at: null, events: [row],
+        log: [{ at, action: "created", from_status: null, to_status: "open", note: `Opened from 1 event; ${fault.checks.length} checks copied from the fault library.`, recorded_by: body?.recorded_by ?? null }],
+        verification: { status: "not_started", analysis_id: null, hours_scored: null, detail: "Verification starts once the work order is completed." },
+        version: 1,
+      };
+      orders.push(order);
+      return json(route, order, 201);
+    }
+    if (path === "/work-orders" && method === "GET") {
+      const eventId = url.searchParams.get("event_id");
+      const items = orders
+        .filter((o) => !eventId || (o.events as { id: string }[]).some((e) => e.id === eventId))
+        .map((o) => ({ ...o, event_count: 1, first_event_starts_at: (o.events as { starts_at: string }[])[0]!.starts_at }));
+      return json(route, page(items));
+    }
+    const order = orders.find((o) => path.startsWith(`/work-orders/${o.id}`));
+    if (!order) return undefined;
+    if (path.endsWith("/transitions") && method === "POST") {
+      const to = { start: "in_progress", complete: "completed", cancel: "cancelled" }[body?.to as string]!;
+      Object.assign(order, {
+        status: to, version: (order.version as number) + 1,
+        ...(to === "completed" ? {
+          outcome: body?.outcome, findings: body?.findings, repair_time: body?.repair_time, completed_at: at,
+          verification: { status: "pending", analysis_id: null, hours_scored: null, detail: "Waiting for an analysis of data recorded after the repair." },
+        } : {}),
+      });
+      (order.log as unknown[]).push({ at, action: to === "in_progress" ? "started" : to, from_status: null, to_status: to, note: body?.findings ?? "Work started.", recorded_by: null });
+    }
+    return json(route, order);
+  };
+
   await p.route("**/api/v1/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace("/api/v1", "");
@@ -149,6 +197,10 @@ export async function mockApi(p: Page, { demo = false, failOverview = false } = 
     if (path === "/models") return json(route, models);
     if (path === "/fault-events/summary") return json(route, { items: [{ kind: event.kind, fault: event.fault, events: 1, hours: event.hours }], events: 1, hours: event.hours });
     if (path === "/fault-events") return json(route, page(eventRows));
+    if (path.startsWith("/work-orders")) {
+      const handled = workOrders(route, path, url);
+      if (handled) return handled;
+    }
     if (path === "/fault-library") return json(route, { review_status: library.review_status, sources: library.sources, items: library.faults });
     if (path.startsWith("/fault-library/")) {
       const fault = library.faults.find((f: { id: string }) => f.id === path.split("/").pop());

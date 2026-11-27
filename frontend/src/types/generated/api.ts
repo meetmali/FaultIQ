@@ -356,6 +356,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListWorkOrders"];
+        put?: never;
+        post: operations["CreateWorkOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportWorkOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateWorkOrder"];
+        trace?: never;
+    };
+    "/api/v1/work-orders/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TransitionWorkOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -409,6 +473,13 @@ export interface components {
         CreateEquipmentRequest: {
             name: string;
             site: null | string;
+        };
+        CreateWorkOrderRequest: {
+            event_ids: null | string[];
+            priority: null | string;
+            assignee: null | string;
+            notes: null | string;
+            recorded_by: null | string;
         };
         DailyFaultHours: {
             /** Format: date */
@@ -634,6 +705,15 @@ export interface components {
             /** Format: int32 */
             total: number;
         };
+        PagedResultOfWorkOrderSummary: {
+            items: components["schemas"]["WorkOrderSummary"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            page_size: number;
+            /** Format: int32 */
+            total: number;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -683,6 +763,12 @@ export interface components {
             train: string;
             validation: string;
         };
+        UpdateWorkOrderRequest: {
+            priority: null | string;
+            assignee: null | string;
+            notes: null | string;
+            recorded_by: null | string;
+        };
         UploadResponse: {
             /** Format: uuid */
             id: string;
@@ -695,6 +781,104 @@ export interface components {
             sha256: string;
             /** Format: date-time */
             created_at: string;
+        };
+        WorkOrderCheck: {
+            text: string;
+            source: string;
+        };
+        WorkOrderLogResponse: {
+            /** Format: date-time */
+            at: string;
+            action: string;
+            from_status: null | string;
+            to_status: null | string;
+            note: null | string;
+            recorded_by: null | string;
+        };
+        WorkOrderResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            number: number;
+            code: string;
+            /** Format: uuid */
+            equipment_id: string;
+            equipment_name: string;
+            site: null | string;
+            fault: null | string;
+            title: string;
+            status: string;
+            priority: string;
+            suggested_priority: string;
+            priority_reason: string;
+            assignee: null | string;
+            notes: null | string;
+            checks: components["schemas"]["WorkOrderCheck"][];
+            /** Format: int32 */
+            library_version: number;
+            library_review_status: string;
+            outcome: null | string;
+            confirmed_fault: null | string;
+            findings: null | string;
+            /** Format: date-time */
+            repair_time: null | string;
+            cancel_reason: null | string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at: null | string;
+            /** Format: date-time */
+            completed_at: null | string;
+            /** Format: date-time */
+            cancelled_at: null | string;
+            events: components["schemas"]["FaultEventResponse"][];
+            log: components["schemas"]["WorkOrderLogResponse"][];
+            verification: components["schemas"]["WorkOrderVerification"];
+            /** Format: int64 */
+            version: number;
+        };
+        WorkOrderSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            number: number;
+            code: string;
+            /** Format: uuid */
+            equipment_id: string;
+            equipment_name: string;
+            site: null | string;
+            fault: null | string;
+            title: string;
+            status: string;
+            priority: string;
+            assignee: null | string;
+            /** Format: int32 */
+            event_count: number;
+            /** Format: date-time */
+            first_event_starts_at: null | string;
+            outcome: null | string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            completed_at: null | string;
+        };
+        WorkOrderTransitionRequest: {
+            to: null | string;
+            outcome: null | string;
+            confirmed_fault: null | string;
+            findings: null | string;
+            /** Format: date-time */
+            repair_time: null | string;
+            reason: null | string;
+            recorded_by: null | string;
+        };
+        WorkOrderVerification: {
+            status: string;
+            /** Format: uuid */
+            analysis_id: null | string;
+            /** Format: int32 */
+            hours_scored: null | number;
+            detail: string;
         };
     };
     responses: never;
@@ -1317,6 +1501,283 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelsResponse"];
+                };
+            };
+        };
+    };
+    ListWorkOrders: {
+        parameters: {
+            query?: {
+                status?: string;
+                priority?: string;
+                fault?: string;
+                equipment_id?: string;
+                site?: string;
+                event_id?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedResultOfWorkOrderSummary"];
+                };
+            };
+        };
+    };
+    CreateWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ExportWorkOrders: {
+        parameters: {
+            query?: {
+                status?: string;
+                priority?: string;
+                fault?: string;
+                equipment_id?: string;
+                site?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TransitionWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };

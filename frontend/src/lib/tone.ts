@@ -43,3 +43,21 @@ export const REVIEW_TONE: Record<string, Tone> = {
   confirmed: "ok",
   rejected: "idle",
 };
+
+export const WORK_ORDER_TONE: Record<string, Tone> = {
+  open: "warn",
+  in_progress: "accent",
+  completed: "ok",
+  cancelled: "idle",
+};
+
+export const PRIORITY_TONE: Record<string, Tone> = { urgent: "fault", high: "warn", medium: "info", low: "idle" };
+
+export const VERIFICATION_TONE: Record<string, Tone> = {
+  not_started: "idle",
+  pending: "info",
+  verified: "ok",
+  persists: "fault",
+  not_verifiable: "warn",
+  not_applicable: "idle",
+};

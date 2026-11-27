@@ -6,10 +6,11 @@ import { usePreferences } from "../../app/preferences";
 import { IsometricRtu } from "../../components/illustrations/IsometricRtu";
 import { COMPONENT_LABEL, isComponent, type UnitState } from "../../components/illustrations/components";
 import { DataQualityCard } from "../../components/DataQuality";
+import { WorkOrderPanel } from "../../components/WorkOrderPanel";
 import { Empty, ErrorState, Loading, QueryView } from "../../components/QueryState";
 import { Badge, Button, Card, CardTitle } from "../../components/ui";
 import { HealthStrip, Meter, type StripSegment } from "../../components/visuals";
-import { useAnalyses, useAnalysis, useEquipment, useHealth, useLibraryIndex, useResult, useSeries } from "../../hooks/queries";
+import { useAnalyses, useAnalysis, useEquipment, useFaultEvents, useHealth, useLibraryIndex, useResult, useSeries } from "../../hooks/queries";
 import { formatDataTime, formatPercent } from "../../lib/format";
 import { faultTitle } from "../../lib/labels";
 import { TONE, type Tone } from "../../lib/tone";
@@ -93,6 +94,8 @@ function UnitStory({
   const demo = useHealth().data?.demo_mode ?? false;
   const [copied, setCopied] = useState(false);
   const event = result.events.find((e) => e.id === eventKey) ?? mainEvent(result.events);
+  const rows = useFaultEvents({ analysis_id: analysis.id, page_size: 100 });
+  const eventRowId = rows.data?.items.find((r) => r.event_key === event?.id)?.id;
   const fault: LibraryFault | undefined = event?.fault ? library.get(event.fault) : undefined;
   const totals = faultHours(result.events);
   const hoursOfMain = event?.fault ? (totals.find(([f]) => f === event.fault)?.[1] ?? event.hours) : (event?.hours ?? 0);
@@ -169,6 +172,9 @@ function UnitStory({
                   <HardHat aria-hidden="true" className="size-4" />
                   Open technician view
                 </Button>
+              </div>
+              <div className="mt-4">
+                <WorkOrderPanel eventId={eventRowId} kind={event.kind} compact />
               </div>
             </>
           )}

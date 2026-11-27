@@ -32,5 +32,6 @@ When a decision changes, write a new ADR that supersedes the old one. Don't rewr
 | [0025](0025-frontend-screens.md) | Frontend screens, fault library content and human review | Accepted |
 | [0026](0026-persona-redesign.md) | Persona-based redesign: Operator and Technician views | Accepted |
 | [0027](0027-data-quality-report-and-models-page.md) | Data-quality report and models page (Close the loop, slice A) | Accepted |
+| [0028](0028-work-orders.md) | Work orders, fix verification and handoff export (Close the loop, slice B) | Accepted |
 
 Template: copy [`template.md`](template.md).

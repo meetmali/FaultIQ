@@ -22,6 +22,8 @@ export const keys = {
   daily: (filters: object) => ["fault-events", "daily", filters] as const,
   report: (id: string) => ["analysis", id, "report"] as const,
   models: ["models"] as const,
+  workOrders: (filters: object) => ["work-orders", filters] as const,
+  workOrder: (id: string) => ["work-orders", "one", id] as const,
 };
 
 const TERMINAL = new Set(["succeeded", "failed"]);
@@ -83,6 +85,44 @@ export const useReport = (id: string | undefined, finished: boolean) =>
     enabled: Boolean(id) && finished,
     staleTime: Infinity, // written once by the worker
   });
+
+export const useWorkOrders = (filters: api.WorkOrderFilters) =>
+  useQuery({ queryKey: keys.workOrders(filters), queryFn: () => api.listWorkOrders(filters), placeholderData: keepPreviousData });
+
+export const useWorkOrder = (id: string) =>
+  useQuery({ queryKey: keys.workOrder(id), queryFn: ({ signal }) => api.getWorkOrder(id, signal) });
+
+export function useCreateWorkOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createWorkOrder>[0]) => api.createWorkOrder(body),
+    onSuccess: (order) => {
+      qc.setQueryData(keys.workOrder(order.id), order);
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+    },
+  });
+}
+
+/** Edits and moves on one order. The server answers with the whole order, which replaces the cache. */
+export function useWorkOrderActions(id: string) {
+  const qc = useQueryClient();
+  const onSuccess = (order: Awaited<ReturnType<typeof api.getWorkOrder>>) => {
+    qc.setQueryData(keys.workOrder(id), order);
+    qc.invalidateQueries({ queryKey: ["work-orders"], predicate: (q) => q.queryKey[1] !== "one" });
+  };
+  return {
+    update: useMutation({
+      mutationFn: (input: { version: number; body: Parameters<typeof api.updateWorkOrder>[2] }) =>
+        api.updateWorkOrder(id, input.version, input.body),
+      onSuccess,
+    }),
+    transition: useMutation({
+      mutationFn: (input: { version: number; body: Parameters<typeof api.transitionWorkOrder>[2] }) =>
+        api.transitionWorkOrder(id, input.version, input.body),
+      onSuccess,
+    }),
+  };
+}
 
 export const useModels = () => useQuery({ queryKey: keys.models, queryFn: api.listModels });
 

@@ -4,6 +4,7 @@ import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
 import { KindBadge, ReviewBadge } from "../../components/Badges";
 import { DataQualityCard } from "../../components/DataQuality";
+import { WorkOrderPanel } from "../../components/WorkOrderPanel";
 import { ChartFigure, type ChartOption } from "../../components/charts";
 import { axisName, KIND_SHADE, LINE_COLORS } from "../../components/charts/theme";
 import { Empty, ErrorState, Freshness, Loading, QueryView } from "../../components/QueryState";
@@ -504,6 +505,8 @@ function EventDetail({
       )}
 
       <CaseHistory result={result} event={event} rows={rows} onSelect={onSelect} />
+
+      <WorkOrderPanel eventId={row?.id} kind={event.kind} />
 
       {row && (demo ? (
         <p className="text-xs text-muted">Reviews are disabled in the public demo.</p>

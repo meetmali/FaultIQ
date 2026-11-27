@@ -13,6 +13,7 @@ import { usePreferences, type Persona, type ThemeChoice } from "./preferences";
 const NAV = [
   { to: "/", label: "Home", end: true },
   { to: "/units", label: "Units", end: false },
+  { to: "/work-orders", label: "Work orders", end: false },
   { to: "/library", label: "Fault Library", end: false },
   { to: "/models", label: "Models", end: false },
 ];
@@ -142,7 +143,7 @@ export function Layout() {
         Skip to content
       </a>
       {health.data?.demo_mode && <DemoBanner />}
-      <header className="border-b border-line bg-surface">
+      <header className="border-b border-line bg-surface print:hidden">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
           <NavLink to="/" className="flex items-center gap-2 font-semibold text-ink">
             <Activity aria-hidden="true" className="size-5 text-accent" />

@@ -9,6 +9,9 @@ public sealed class FaultIqDbContext(DbContextOptions<FaultIqDbContext> options)
     public DbSet<Upload> Uploads => Set<Upload>();
     public DbSet<Analysis> Analyses => Set<Analysis>();
     public DbSet<FaultEvent> FaultEvents => Set<FaultEvent>();
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
+    public DbSet<WorkOrderEvent> WorkOrderEvents => Set<WorkOrderEvent>();
+    public DbSet<WorkOrderLogEntry> WorkOrderLog => Set<WorkOrderLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -87,6 +90,72 @@ public sealed class FaultIqDbContext(DbContextOptions<FaultIqDbContext> options)
                 t.HasCheckConstraint("ck_fault_events_hours", "hours > 0");
                 t.HasCheckConstraint("ck_fault_events_review_status", Sql.In("review_status", ReviewStatuses.All));
             });
+        });
+
+        ConfigureWorkOrders(b);
+    }
+
+    private static void ConfigureWorkOrders(ModelBuilder b)
+    {
+        b.Entity<WorkOrder>(e =>
+        {
+            e.Property(x => x.Number).UseIdentityAlwaysColumn();
+            e.HasIndex(x => x.Number).IsUnique();
+            e.Property(x => x.Fault).HasMaxLength(100);
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.Priority).HasMaxLength(20);
+            e.Property(x => x.SuggestedPriority).HasMaxLength(20);
+            e.Property(x => x.PriorityReason).HasMaxLength(300);
+            e.Property(x => x.Assignee).HasMaxLength(200);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            e.Property(x => x.Checks).HasColumnType("jsonb");
+            e.Property(x => x.LibraryReviewStatus).HasMaxLength(30);
+            e.Property(x => x.Outcome).HasMaxLength(30);
+            e.Property(x => x.ConfirmedFault).HasMaxLength(100);
+            e.Property(x => x.Findings).HasMaxLength(2000);
+            e.Property(x => x.CancelReason).HasMaxLength(1000);
+            // uint + IsRowVersion maps to PostgreSQL's xmin system column: no column is added.
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => new { x.EquipmentId, x.CreatedAt });
+            e.ToTable("work_orders", t =>
+            {
+                t.HasCheckConstraint("ck_work_orders_status", Sql.In("status", WorkOrderStatuses.All));
+                t.HasCheckConstraint("ck_work_orders_priority", Sql.In("priority", WorkOrderPriorities.All));
+                t.HasCheckConstraint("ck_work_orders_suggested_priority", Sql.In("suggested_priority", WorkOrderPriorities.All));
+                t.HasCheckConstraint("ck_work_orders_outcome",
+                    $"outcome IS NULL OR {Sql.In("outcome", WorkOrderOutcomes.All)}");
+                // A completed order always carries what a person found; a cancelled one says why.
+                t.HasCheckConstraint("ck_work_orders_completed",
+                    "status <> 'completed' OR (outcome IS NOT NULL AND findings IS NOT NULL AND completed_at IS NOT NULL)");
+                t.HasCheckConstraint("ck_work_orders_cancelled",
+                    "status <> 'cancelled' OR (cancel_reason IS NOT NULL AND cancelled_at IS NOT NULL)");
+            });
+        });
+
+        b.Entity<WorkOrderEvent>(e =>
+        {
+            e.ToTable("work_order_events");
+            e.HasKey(x => new { x.WorkOrderId, x.FaultEventId });
+            e.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<FaultEvent>().WithMany().HasForeignKey(x => x.FaultEventId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.FaultEventId);
+        });
+
+        b.Entity<WorkOrderLogEntry>(e =>
+        {
+            e.ToTable("work_order_log");
+            e.Property(x => x.Sequence).UseIdentityAlwaysColumn();
+            e.Property(x => x.Action).HasMaxLength(30);
+            e.Property(x => x.FromStatus).HasMaxLength(20);
+            e.Property(x => x.ToStatus).HasMaxLength(20);
+            e.Property(x => x.Note).HasMaxLength(2500);
+            e.Property(x => x.RecordedBy).HasMaxLength(200);
+            e.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.WorkOrderId, x.Sequence });
         });
     }
 

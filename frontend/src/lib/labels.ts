@@ -51,3 +51,28 @@ export const STATUS_LABEL: Record<string, string> = {
   analysis_failed: "Analysis failed",
   no_data: "No data yet",
 };
+
+// Work orders (ADR 0028).
+export const WORK_ORDER_STATUS_LABEL: Record<string, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const PRIORITY_LABEL: Record<string, string> = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
+
+export const OUTCOME_LABEL: Record<string, string> = {
+  confirmed: "Fault confirmed",
+  different_fault: "A different fault was found",
+  no_fault_found: "No fault found",
+};
+
+export const VERIFICATION_LABEL: Record<string, string> = {
+  not_started: "Not completed yet",
+  pending: "Waiting for new data",
+  verified: "Fix verified",
+  persists: "Fault still present",
+  not_verifiable: "Not enough data yet",
+  not_applicable: "Nothing to verify",
+};

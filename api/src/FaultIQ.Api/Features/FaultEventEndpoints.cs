@@ -72,7 +72,7 @@ public static class FaultEventEndpoints
         return q;
     }
 
-    private static FaultEventResponse ToResponse(FaultEvent e) => new(
+    internal static FaultEventResponse ToResponse(FaultEvent e) => new(
         e.Id, e.AnalysisId, e.EquipmentId, e.EventKey, e.Kind, e.Fault, e.StartsAt, e.EndsAt, e.Hours,
         e.Confidence, e.DetectorScore, e.ReviewStatus, e.ReviewNote, e.ReviewedAt);
 

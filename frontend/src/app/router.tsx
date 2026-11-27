@@ -14,6 +14,8 @@ const UnitPage = lazy(() => import("../pages/UnitPage"));
 const LibraryPage = lazy(() => import("../pages/LibraryPage"));
 const LibraryEntryPage = lazy(() => import("../pages/LibraryEntryPage"));
 const ModelsPage = lazy(() => import("../pages/ModelsPage"));
+const WorkOrdersPage = lazy(() => import("../pages/WorkOrdersPage"));
+const WorkOrderPage = lazy(() => import("../pages/WorkOrderPage"));
 
 const page = (el: ReactNode) => <Suspense fallback={<Loading />}>{el}</Suspense>;
 
@@ -38,6 +40,8 @@ export const routes = [
       { path: "library", element: page(<LibraryPage />) },
       { path: "library/:faultId", element: page(<LibraryEntryPage />) },
       { path: "models", element: page(<ModelsPage />) },
+      { path: "work-orders", element: page(<WorkOrdersPage />) },
+      { path: "work-orders/:workOrderId", element: page(<WorkOrderPage />) },
       { path: "*", element: <NotFound /> },
     ],
   },

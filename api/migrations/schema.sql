@@ -235,3 +235,120 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE TABLE work_orders (
+        id uuid NOT NULL,
+        number integer GENERATED ALWAYS AS IDENTITY,
+        equipment_id uuid NOT NULL,
+        fault character varying(100),
+        title character varying(200) NOT NULL,
+        status character varying(20) NOT NULL,
+        priority character varying(20) NOT NULL,
+        suggested_priority character varying(20) NOT NULL,
+        priority_reason character varying(300) NOT NULL,
+        assignee character varying(200),
+        notes character varying(2000),
+        checks jsonb NOT NULL,
+        library_version integer NOT NULL,
+        library_review_status character varying(30) NOT NULL,
+        outcome character varying(30),
+        confirmed_fault character varying(100),
+        findings character varying(2000),
+        repair_time timestamp with time zone,
+        cancel_reason character varying(1000),
+        created_at timestamp with time zone NOT NULL,
+        started_at timestamp with time zone,
+        completed_at timestamp with time zone,
+        cancelled_at timestamp with time zone,
+        CONSTRAINT pk_work_orders PRIMARY KEY (id),
+        CONSTRAINT ck_work_orders_cancelled CHECK (status <> 'cancelled' OR (cancel_reason IS NOT NULL AND cancelled_at IS NOT NULL)),
+        CONSTRAINT ck_work_orders_completed CHECK (status <> 'completed' OR (outcome IS NOT NULL AND findings IS NOT NULL AND completed_at IS NOT NULL)),
+        CONSTRAINT ck_work_orders_outcome CHECK (outcome IS NULL OR outcome IN ('confirmed', 'different_fault', 'no_fault_found')),
+        CONSTRAINT ck_work_orders_priority CHECK (priority IN ('urgent', 'high', 'medium', 'low')),
+        CONSTRAINT ck_work_orders_status CHECK (status IN ('open', 'in_progress', 'completed', 'cancelled')),
+        CONSTRAINT ck_work_orders_suggested_priority CHECK (suggested_priority IN ('urgent', 'high', 'medium', 'low')),
+        CONSTRAINT fk_work_orders_equipment_equipment_id FOREIGN KEY (equipment_id) REFERENCES equipment (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE TABLE work_order_events (
+        work_order_id uuid NOT NULL,
+        fault_event_id uuid NOT NULL,
+        CONSTRAINT pk_work_order_events PRIMARY KEY (work_order_id, fault_event_id),
+        CONSTRAINT fk_work_order_events_fault_events_fault_event_id FOREIGN KEY (fault_event_id) REFERENCES fault_events (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_work_order_events_work_orders_work_order_id FOREIGN KEY (work_order_id) REFERENCES work_orders (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE TABLE work_order_log (
+        id uuid NOT NULL,
+        sequence bigint GENERATED ALWAYS AS IDENTITY,
+        work_order_id uuid NOT NULL,
+        at timestamp with time zone NOT NULL,
+        action character varying(30) NOT NULL,
+        from_status character varying(20),
+        to_status character varying(20),
+        note character varying(2500),
+        recorded_by character varying(200),
+        CONSTRAINT pk_work_order_log PRIMARY KEY (id),
+        CONSTRAINT fk_work_order_log_work_orders_work_order_id FOREIGN KEY (work_order_id) REFERENCES work_orders (id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE INDEX ix_work_order_events_fault_event_id ON work_order_events (fault_event_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE INDEX ix_work_order_log_work_order_id_sequence ON work_order_log (work_order_id, sequence);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE INDEX ix_work_orders_equipment_id_created_at ON work_orders (equipment_id, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE UNIQUE INDEX ix_work_orders_number ON work_orders (number);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    CREATE INDEX ix_work_orders_status_created_at ON work_orders (status, created_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20261127104157_AddWorkOrders') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20261127104157_AddWorkOrders', '10.0.14');
+    END IF;
+END $EF$;
+COMMIT;
+

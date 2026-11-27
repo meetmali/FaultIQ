@@ -110,6 +110,7 @@ public sealed class UploadValidationTests(ApiFactory factory) : IClassFixture<Ap
 }
 
 /// <summary>The API against a real, freshly migrated PostgreSQL database.</summary>
+[Collection(DatabaseCollection.Name)]
 public sealed class DatabaseEndpointTests(DatabaseFactory factory) : IClassFixture<DatabaseFactory>
 {
     private static readonly JsonSerializerOptions Snake = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };

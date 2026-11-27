@@ -122,6 +122,11 @@ curl localhost:8000/api/v1/analyses/<id>/result     # once its status is "succee
 missing values, also for quarantined files. `/models` lists each model with its held-out results and
 the versions this installation has used (ADR 0027).
 
+`/work-orders` turns fault events into work orders for whoever checks the unit (ADR 0028): checks
+copied from the fault library, an outcome recorded on completion, and verification against the next
+upload after the repair. Changes need `If-Match` with the order's version; `/work-orders/export`
+returns a CSV.
+
 Lists (`/equipment`, `/analyses`, `/fault-events`) take `page` and `page_size` (at most 100) and return
 `items`, `page`, `page_size` and `total`. Errors are RFC 9457 problems with a stable `code`.
 
